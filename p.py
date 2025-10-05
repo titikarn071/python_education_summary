@@ -1,5 +1,3 @@
-
-
 import os
 import sqlite3
 from flask import Flask, render_template, request, redirect, url_for, flash
@@ -42,32 +40,11 @@ def init_db():
             text TEXT
         )''')
 
-# หน้าแรก แสดงโพสต์ทั้งหมด และฟอร์มเพิ่มโพสต์
+
+# หน้าแรกเป็นหน้า setting
 @app.route("/", methods=["GET", "POST"])
 def index():
-    with get_db() as db:
-        if request.method == "POST":
-            # รับข้อความและรูปจากฟอร์ม
-            text = request.form.get("summary")
-            image = request.files.get("image")
-            image_filename = None
-            if image and image.filename:
-                # ตั้งชื่อไฟล์รูปไม่ให้ซ้ำ
-                image_filename = f"{int.from_bytes(os.urandom(8),'big')}_{image.filename}"
-                image.save(os.path.join(app.config['UPLOAD_FOLDER'], image_filename))
-            # บันทึกลงฐานข้อมูล
-            db.execute("INSERT INTO summary (text, image) VALUES (?, ?)", (text, image_filename))
-            db.commit()
-            flash("เพิ่มสรุปแล้ว")
-            return redirect(url_for('index'))
-        # ดึงข้อมูลทั้งหมดมาแสดง
-        summaries = db.execute("SELECT * FROM summary ORDER BY id DESC").fetchall()
-        comments = db.execute("SELECT * FROM comment").fetchall()
-    # รวมคอมเมนต์แต่ละโพสต์
-    comment_map = {}
-    for c in comments:
-        comment_map.setdefault(c['summary_id'], []).append(c)
-    return render_template("login.html", summaries=summaries, comment_map=comment_map)
+    return render_template("setting.html")
 
 # ฟังก์ชันเพิ่มคอมเมนต์
 @app.route("/comment/<int:summary_id>", methods=["POST"])
@@ -107,8 +84,27 @@ def register():
         return redirect(url_for('login'))
     return render_template('register.html')
 
+@app.route('/setting', methods=['GET', 'POST'])
+def setting():
+    # ในระบบจริงควรดึง username/password จาก session/database
+    current_username = 'demo_user'
+    current_password = 'demo_pass'
+    if request.method == 'POST':
+        # รับค่าที่ผู้ใช้กรอกมาใหม่
+        new_username = request.form['username']
+        new_password = request.form['password']
+        # TODO: บันทึก username/password ใหม่ลง database หรือ session
+        flash('บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว')
+        # แสดงค่าที่เปลี่ยนใหม่
+        current_username = new_username
+        current_password = new_password
+    return render_template('setting.html', current_username=current_username, current_password=current_password)
+
+@app.route('/logout', methods=['GET'])
+def logout():
+    return redirect(url_for('login'))
+
 # เริ่มรันเว็บ
 if __name__ == "__main__":
     init_db()
     app.run(port=5002)
-    
